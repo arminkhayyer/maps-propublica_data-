@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+{% load static %}
+{% load blog_tag %}
+
+{% block style %}
+
+
+<style>
+
+
+	.state{
+		fill: none;
+		stroke: #a9a9a9;
+		stroke-width: 1;
+	}
+	.state:hover{
+		fill-opacity: .8;
+	}
+	#tooltip {
+		position: absolute;
+		text-align: center;
+		padding: 20px;
+		margin: 10px;
+		font: 12px sans-serif;
+		background: lightsteelblue;
+		border: 1px;
+		border-radius: 3px;
+		pointer-events: none;
+        height: 100px;
+	}
+	#tooltip h4{
+		margin:0;
+		font-size:14px;
+	}
+	#tooltip{
+		background:rgba(0,0,0,.8);
+		border:1px solid grey;
+		border-radius:5px;
+		font-size:12px;
+		width:100px;
+		padding:4px;
+		color:white;
+		opacity: .5;
+	}
+	#tooltip table{
+		table-layout:fixed;
+	}
+	#tooltip tr td{
+		padding:0;
+		margin:0;
+	}
+	#tooltip tr td:nth-child(1){
+		width:50px;
+	}
+	#tooltip tr td:nth-child(2){
+		text-align:center;
+	}
+    div.slider.slider-horizontal{
+    width: 500px;
+    }
+.legend {
+  position: absolute;
+  background: #fff;
+  background: rgba(255, 255, 255, 0.8);
+  right: 20px;
+  top: 110px;
+  padding: 5px;
+  border: 1px solid;
+}
+.legend h4 {
+  margin: 0 0 10px;
+  font-family: sans-serif;
+  text-align: center;
+}
+.legend ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+    font-size: 3mm;
+}
+.legend li { padding-bottom: 5px; }
+.legend span {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+}
+</style>
+
+{% endblock %}
+
+{% block content %}
+<body>
+<div class="container" style="margin-left:10%" id="slider" onclick="trans()">
+    <div class="row">
+    <div class="col-lg-9"><em class="text text-success" style="color: green">Please select a range of years</em><br>
+    <input
+	type="text"
+    id="ex16b"
+	name="somename"
+	data-provide="slider"
+	data-slider-ticks="[2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017]"
+	data-slider-ticks-labels='[2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017]'
+	data-slider-min="1"
+	data-slider-max="8"
+	data-slider-step="1"
+	data-slider-value="8"
+	data-slider-tooltip="hide">
+    </div>
+        <div class="legend">
+		    <ul>
+		        <li><span style="background-color:#3366CC"></span>EQUIPMENT</li>
+		        <li><span style="background-color:#DC3912"></span>FRM</li>
+		        <li><span style="background-color:#FF9900"></span>SUP& MAT</li>
+		        <li><span style="background-color:#109618"></span>TRAVEL</li>
+		        <li><span style="background-color:#990099"></span>PRINTING</li>
+                <li><span style="background-color:#889944"></span>R, C, U</li>
+		        </ul>
+		 </div>
+        <div class="legend" style="position: absolute; right: 20px;top: 470px;">
+		    <ul>
+		        <li><span style="background-color:#3366CC"></span>WOMEN</li>
+		        <li><span style="background-color:#DC3912"></span>MEN</li>
+
+		        </ul>
+		 </div>
+        <em style=" color: #109618; position: absolute; top: 75px; right: 180px; width: 200px; text-align: center">Expenditure Categorically</em>
+    <div class="col-lg-3" style="position: absolute; top: 100px; right: 220px; width: 200px" >
+        <svg width="300" height="600" style="margin-left: 5%" id="donut"></svg>
+         <em style=" color: #109618; position: absolute;  top:270px;right: -50px; width: 200px; text-align: center">Expenditure Categorically</em>
+    </div></div></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.3.2/bootstrap-slider.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.3.2/bootstrap-slider.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.3.2/css/bootstrap-slider.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.3.2/css/bootstrap-slider.min.css" />
+
+<script>
+var sliderB = new Slider("#ex16b", { min: 0, max: 10, value: [0, 10], focus: true });
+
+</script>
+
+<script src="{% static "uStates.js" %}"></script> <!-- creates uStates. -->
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<div id="tooltip"></div><!-- div to hold tooltip. -->
+
+
+<div class="col-lg-7" ><svg width="1000" height="600" style="margin-left: 5%; margin-top: 2%" id="statesvg"></svg></div>
+
+<!-- svg to hold the map. -->
+<script>
+
+    var dataa = {{ data|safe}};
+    function filter_data_yearly() {
+        var year = document.getElementById("ex16b").value;
+        var start = Number(year.split(",")[0]);
+        var end = Number(year.split(",")[1]);
+        var data = {
+            "YEAR": [],
+            "CATEGORY": [],
+            "AMOUNT": [],
+            "BIOGUIDE_ID": [],
+            "gender": [],
+            "state": [],
+            "party": []
+        };
+        for (i in dataa.YEAR) {
+            if (dataa.YEAR[i] >= start && dataa.YEAR[i] <= end) {
+                data.YEAR.push(dataa.YEAR[i]);
+                data.CATEGORY.push(dataa.CATEGORY[i]);
+                data.AMOUNT.push(dataa.AMOUNT[i]);
+                data.BIOGUIDE_ID.push(dataa.BIOGUIDE_ID[i]);
+                data.gender.push(dataa.gender[i]);
+                data.state.push(dataa.state[i]);
+                data.party.push(dataa.party[i])
+            }
+        }
+    return data}
+
+    function map() {
+        //svg.selectAll("*").remove();
+        var data = filter_data_yearly();
+        console.log(data);
+
+    function find_number(state) {
+        var D_counter = 0,
+            R_counter = 0;
+        for (var i in data.state) {
+            if (data.state[i] == state) {
+                if (data.party[i] == "D") {
+                    D_counter++
+                }
+                if (data.party[i] == "R") {
+                    R_counter++
+                }
+            }
+        }
+        var color = "";
+        if (D_counter >= R_counter) {
+            color = "#0135ff"
+        } else {
+            color = "#e22d07"
+        }
+        return [D_counter, R_counter, color];
+    }
+
+    function find_percentage(state) {
+        var R_total = 0,
+            D_total = 0;
+
+        for (var i in data.state) {
+            if (data.state[i] == state) {
+                if (data.party[i] == "D") {
+                    D_total += data.AMOUNT[i]
+                }
+                if (data.party[i] == "R") {
+                    R_total += data.AMOUNT[i]
+                }
+            }
+        }
+        var total = R_total + D_total;
+        return [R_total / total * 100, D_total / total * 100]
+    }
+
+
+    function tooltipHtml(n, d) {    /* function to create html content string in tooltip div. */
+        return "<h4 id=" + "header" + ">" + n + "</h4><table>" +
+            "<tr><td>D percentage</td><td>" + (d.DP) + "%" + "</td></tr>" +
+            "<tr><td>R percentage</td><td>" + (d.RP) + "%" + "</td></tr>" +
+            "<tr><td>#R</td><td>" + (d.RN) + "</td></tr>" +
+            "<tr><td>#D</td><td>" + (d.DN) + "</td></tr>" +
+            "</table>";
+    }
+
+    var sampleData = {};
+    /* Sample random data. */
+    ["HI", "AK", "FL", "SC", "GA", "AL", "NC", "TN", "RI", "CT", "MA",
+        "ME", "NH", "VT", "NY", "NJ", "PA", "DE", "MD", "WV", "KY", "OH",
+        "MI", "WY", "MT", "ID", "WA", "DC", "TX", "CA", "AZ", "NV", "UT",
+        "CO", "NM", "OR", "ND", "SD", "NE", "IA", "MS", "IN", "IL", "MN",
+        "WI", "MO", "AR", "OK", "KS", "LS", "VA"]
+        .forEach(function (d) {
+            var DP = Math.round(find_percentage(d)[1]),
+                RP = Math.round(find_percentage(d)[0]),
+                DN = find_number(d)[0],
+                RN = find_number(d)[1];
+
+            sampleData[d] = {
+                DP: DP, DN: DN, RN: RN,
+                RP: RP, color: find_number(d)[2]
+            };
+        });
+
+return [sampleData, tooltipHtml]}
+
+    /* draw states on id #statesvg */
+    uStates.draw("#statesvg", map()[0], map()[1]);
+    d3.select(self.frameElement).style("height", "600px");
+
+    function trans() {
+        svvgg = d3.select("#statesvg");
+        svvgg.selectAll("*").remove();
+        uStates.draw("#statesvg", map()[0], map()[1]);
+    }
+</script>
+
+
+<script src="{% static  "Donut3D.js" %}"></script>
+<script>
+
+
+        var data = filter_data_yearly();
+        var salesData = [
+            {label: "EQUIPMENT", color: "#3366CC"},
+            {label: "FRANKED MAIL", color: "#DC3912"},
+            {label: "SUPPLIES AND MATERIALS", color: "#FF9900"},
+            {label: "TRAVEL", color: "#109618"},
+            {label: "PRINTING AND REPRODUCTION", color: "#990099"},
+            {label: "RENT, COMMUNICATION, UTILITIES", color: "#889944"},
+        ];
+
+
+
+         var gender = [
+            {label: "M", color: "#3366CC"},
+            {label: "F", color: "#DC3912"},
+            ];
+
+        var svg = d3.select("#donut");
+
+        svg.append("g").attr("id", "salesDonut").attr("transform", "translate(80,50)");
+        svg.append("g").attr("id","quotesDonut").attr("transform", "translate(80,0)");
+
+        Donut3D.draw("salesDonut", randomData(), 50, 50, 130, 100, 30, 0.4);
+        Donut3D.draw("quotesDonut", randomData_men_women(), 50, 400, 130, 100, 30, 0);
+
+        function changeData() {
+            Donut3D.transition("salesDonut", randomData(), 130, 100, 30, 0.4);
+            Donut3D.transition("quotesDonut", randomData_men_women(), 130, 100, 30, 0);
+
+        }
+
+        var uState = [
+            {id: "HI", n: "Hawaii"},
+            {id: "AK", n: "Alaska"},
+            {id: "FL", n: "Florida"},
+            {id: "NH", n: "New Hampshire"},
+            {id: "MI", n: "Michigan"},
+            {id: "VT", n: "Vermont"},
+            {id: "ME", n: "Maine"},
+            {id: "RI", n: "Rhode Island"},
+            {id: "NY", n: "New York"},
+            {id: "PA", n: "Pennsylvania"},
+            {id: "NJ", n: "New Jersey"},
+            {id: "DE", n: "Delaware"},
+            {id: "MD", n: "Maryland"},
+            {id: "VA", n: "Virginia"},
+            {id: "WV", n: "West Virginia"},
+            {id: "OH", n: "Ohio"},
+            {id: "IN", n: "Indiana"},
+            {id: "IL", n: "Illinois"},
+            {id: "CT", n: "Connecticut"},
+            {id: "WI", n: "Wisconsin"},
+            {id: "NC", n: "North Carolina"},
+            {id: "DC", n: "Washington DC"},
+            {id: "MA", n: "Massachusets"},
+            {id: "TN", n: "Tennessee"},
+            {id: "AR", n: "Arkansas"},
+            {id: "MO", n: "Missouri"},
+            {id: "GA", n: "Georgia"},
+            {id: "SC", n: "South Carolina"},
+            {id: "KY", n: "Kentucky"},
+            {id: "AL", n: "Alabama"},
+            {id: "LS", n: "Louisiana"},
+            {id: "MS", n: "Mississippi"},
+            {id: "IA", n: "Iowa"},
+            {id: "MN", n: "Minnesota"},
+            {id: "OK", n: "Oklahoma"},
+            {id: "TX", n: "Texas"},
+            {id: "NM", n: "New Mexico"},
+            {id: "KS", n: "Kansas"},
+            {id: "NE", n: "Nebraska"},
+            {id: "SD", n: "South Dakota"},
+            {id: "ND", n: "North Dakota"},
+            {id: "WY", n: "Wyoming"},
+            {id: "MT", n: "Montana"},
+            {id: "CO", n: "Colarado"},
+            {id: "ID", n: "Idaho"},
+            {id: "UT", n: "Utah"},
+            {id: "AZ", n: "Arizona"},
+            {id: "NV", n: "Nevada"},
+            {id: "OR", n: "Oregon"},
+            {id: "WA", n: "Washington"},
+            {id: "CA", n: "California"},
+        ];
+
+
+        function find_state(tagid) {
+            try {
+                var state = document.getElementById(tagid).innerHTML;
+            }
+            catch (e) {
+                state = "Hawaii"
+            }
+            var current_state_id = "";
+            for (var i in uState) {
+                if (uState[i].n == state) {
+                    current_state_id = uState[i].id
+                }
+            }
+            console.log(current_state_id);
+            return current_state_id
+        }
+
+
+        function total_cat(state, cat) {
+            var total = 0;
+            var data = filter_data_yearly();
+            for (var i in data.state) {
+                if (data.state[i] == state) {
+                    if (data.CATEGORY[i] == cat) {
+                        total += data.AMOUNT[i]
+                    }
+
+                }
+            }
+            return total
+        }
+
+        function total_men_women(state, gender) {
+            var total = 0;
+            var data = filter_data_yearly();
+            for (var i in data.gender) {
+                if (data.state[i] == state) {
+                    if (data.gender[i] == gender ) {total += data.AMOUNT[i]}
+                }
+            }
+            console.log(total);
+            return total
+        }
+
+
+
+        function randomData() {
+            var curr_state = find_state("header");
+            return salesData.map(function (d) {
+                return {label: d.label, value: total_cat(curr_state, d.label), color: d.color};
+            });
+        }
+
+        function randomData_men_women() {
+            var curr_state = find_state("header");
+            return gender.map(function (d) {
+                return {label: d.label, value: total_men_women(curr_state, d.label), color: d.color};
+            });
+        }
+
+
+
+</script>
+
+
+</body>
+{% endblock %}
